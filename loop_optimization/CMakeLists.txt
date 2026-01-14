@@ -26,7 +26,9 @@ find_package(catkin REQUIRED COMPONENTS
 
 find_package(Eigen3 REQUIRED)
 find_package(PCL REQUIRED)
-find_package(GTSAM REQUIRED QUIET)
+# find_package(GTSAM REQUIRED QUIET)
+set(GTSAM_DIR /home/tkw/seu_clean_robot/seu_clean_robot_env/gtsam-4.0.3-install/lib/cmake/GTSAM)
+find_package(GTSAM REQUIRED)
 find_package(Boost COMPONENTS timer REQUIRED QUIET)
 
 ## Uncomment this if the package has a setup.py. This macro ensures
