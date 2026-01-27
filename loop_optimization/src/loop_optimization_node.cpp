@@ -1567,7 +1567,7 @@ void pubAndSaveGloablMap(bool savemap = true)
         opt_debug_file << "Correcting submap " << node_idx << ", total map size: " << fullMapToSave.size() << std::endl;
     }
     if (fullMapToSave.empty()) return;
-    //DownsampleCloud(fullMapToSave, 0.5); // !!!be careful about resolution, too small will cause memory bug or ros message error.
+    DownsampleCloud(fullMapToSave, 0.5); // !!!be careful about resolution, too small will cause memory bug or ros message error.
     sensor_msgs::PointCloud2 laserCloudMapPGOMsg;
     pcl::toROSMsg(fullMapToSave, laserCloudMapPGOMsg);
     laserCloudMapPGOMsg.header.frame_id = "/camera_init";

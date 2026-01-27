@@ -2,7 +2,7 @@
         <!-- multisession_mode = 1 => you can load cloud for current session -->
         <!-- multisession_mode = 2 => you can save cloud for future  session -->
         <param name="multisession_mode" type="int" value="1"/>
-        <param name="SaveDir" type="string" value="/home/zuhaozou/ws_LTAOM/logs/"/>
+        <param name="SaveDir" type="string" value="/home/tkw/LTAOM/logs/"/>
 
         <node pkg="nodelet" type="nodelet" args="manager" name="sample_nodelet_manager" output="screen">
             <!--param name="num_worker_threads" value="32" /-->
