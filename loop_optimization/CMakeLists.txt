@@ -27,7 +27,7 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(Eigen3 REQUIRED)
 find_package(PCL REQUIRED)
 # find_package(GTSAM REQUIRED QUIET)
-set(GTSAM_DIR /home/tkw/seu_clean_robot/seu_clean_robot_env/gtsam-4.0.3-install/lib/cmake/GTSAM)
+set(GTSAM_DIR /home/wxy/seu_clean_robot/seu_clean_robot_env/gtsam-4.0.3-install/lib/cmake/GTSAM)
 find_package(GTSAM REQUIRED)
 find_package(Boost COMPONENTS timer REQUIRED QUIET)
 
@@ -62,13 +62,21 @@ catkin_package(
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
+# include_directories(
+#   include
+#   ${catkin_INCLUDE_DIRS}
+#   ${PCL_INCLUDE_DIRS}
+#   ${GTSAM_INCLUDE_DIR}
+#   ${Boost_INCLUDE_DIR}
+#   #${LIB_OPENCV_IMGPROC_DIR}/include
+#   src
+# )
 include_directories(
+  ${GTSAM_INCLUDE_DIR}     # 【关键修改】把它提到最前面！强制优先级最高！
   include
   ${catkin_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
-  ${GTSAM_INCLUDE_DIR}
   ${Boost_INCLUDE_DIR}
-  #${LIB_OPENCV_IMGPROC_DIR}/include
   src
 )
 if (PCL_FOUND)

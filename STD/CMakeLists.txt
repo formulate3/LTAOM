@@ -29,7 +29,7 @@ find_package(PCL REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(Threads)
 # find_package(Ceres REQUIRED)
-set(Ceres_DIR /home/tkw/seu_clean_robot/seu_clean_robot_env/ceres-1.14.0-install/lib/cmake/Ceres)
+set(Ceres_DIR /home/wxy/seu_clean_robot/seu_clean_robot_env/ceres-1.14.0-install/lib/cmake/Ceres)
 find_package(Ceres REQUIRED)
 
 
@@ -46,7 +46,7 @@ catkin_package(
 # add_library(libtbb SHARED IMPORTED)
 # set_target_properties(libtbb PROPERTIES IMPORTED_LOCATION ${LIB_OPENCV_IMGPROC_DIR}/build/my_tbb_build_release/libtbb.so.2)
 
-set(LIB_OPENCV_IMGPROC_DIR /home/tkw/tbb/oneTBB)
+set(LIB_OPENCV_IMGPROC_DIR /home/wxy/oneTBB)
 add_library(libtbb SHARED IMPORTED)
 set_target_properties(libtbb PROPERTIES IMPORTED_LOCATION ${LIB_OPENCV_IMGPROC_DIR}/build/linux_intel64_gcc_cc9.4.0_libc2.31_kernel5.15.0_release/libtbb.so.2)
 

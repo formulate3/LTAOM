@@ -94,11 +94,13 @@ catkin_package(
 # target_link_libraries(loam_feat_extract ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 add_library(extra_lib src/extra_lib.cpp)
 target_link_libraries(extra_lib ${OpenCV_LIBS} ${OpenCV_LIBRARIES})
+add_dependencies(extra_lib ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 #add_executable(fastlio_mapping src/laserMapping.cpp include/ikd-Tree/ikd_Tree.cpp include/ikd-Forest/ikd_Forest.cpp include/FOV_Checker/FOV_Checker.cpp src/preprocess.cpp)
 add_library(fastlio_mapping src/laserMapping.cpp include/ikd-Tree/ikd_Tree.cpp include/ikd-Forest/ikd_Forest.cpp include/FOV_Checker/FOV_Checker.cpp src/preprocess.cpp)
 target_link_libraries(fastlio_mapping extra_lib ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${PYTHON_LIBRARIES} ${OpenCV_LIBS})
 target_include_directories(fastlio_mapping PRIVATE ${PYTHON_INCLUDE_DIRS})
+add_dependencies(fastlio_mapping ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 add_library(fastlio_plugin
   src/fastlio_plugin.cpp
