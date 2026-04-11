@@ -1,6 +1,6 @@
 <launch>
         <param name="multisession_mode" type="int" value="2"/>
-        <param name="SaveDir" type="string" value="/home/wxy/AAA_baseline/LTAOM/logs/"/>
+        <param name="SaveDir" type="string" value="/media/wxy/SB@home/zy99/AAA_map/LTAOM/Mulran/KAIST02/"/>
 
         <node pkg="nodelet" type="nodelet" args="manager" name="sample_nodelet_manager" output="screen">
             <!--param name="num_worker_threads" value="32" /-->

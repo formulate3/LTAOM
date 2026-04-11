@@ -1,0 +1,20 @@
+common:
+    lid_topic:  "/velodyne_points"
+    imu_topic:  "/zed2/zed_node/imu/data"
+      
+preprocess:
+    lidar_type: 2                # VLP-16 LiDAR
+    scan_line: 32
+    blind: 2
+
+mapping:
+    acc_cov: 0.1
+    gyr_cov: 0.1
+    b_acc_cov: 0.0001
+    b_gyr_cov: 0.0001
+    fov_degree:    180
+    det_range:     100.0
+    extrinsic_T: [ 0.0904, 0.0621, -0.0746 ]
+    extrinsic_R: [ 0.998688, -0.051027, -0.004126,
+                 0.051109,  0.998410,  0.023736,
+                 0.002908, -0.023914,  0.999710 ]

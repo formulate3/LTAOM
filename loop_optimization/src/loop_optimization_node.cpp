@@ -101,6 +101,8 @@ float overlap_score_thr = 0.5;
 //float first_overlap_score_thr = 0.8;
 bool dosave_pcd = false;
 int pcdsave_step = 10;
+bool export_keyframe_scans = false;
+int keyframe_scan_digits = 6;
 bool dopub_corrmap = false;
 int pairfactor_num = 6;
 float plane_inliner_ratio_thr = 0.5;
@@ -109,6 +111,7 @@ float residual_thr = 2.0;
 float vs_for_ovlap = 2.0;
 
 std::string save_directory, pgo_scan_directory;
+std::string keyframe_scan_directory;
 std::string poses_opt_fname, poses_raw_fname;
 std::fstream poses_opt_file, poses_raw_file;//, poses_opt_all_file;
 std::fstream times_opt_file;
@@ -190,9 +193,17 @@ bool loadConfig(ros::NodeHandle &nh)
     nh.param<float>("VoxelSizeForOverlapCalc",vs_for_ovlap,2);
     nh.param<bool>("SavePCD",dosave_pcd,false);
     nh.param<int>("PCDSaveStep",pcdsave_step,10);
+    nh.param<bool>("ExportKeyframeScans", export_keyframe_scans, false);
+    nh.param<int>("KeyframeScanDigits", keyframe_scan_digits, 6);
+    nh.param<std::string>("KeyframeScanDir", keyframe_scan_directory, std::string(""));
     nh.param<bool>("PubCorrectedMap",dopub_corrmap,false);
     nh.param<std::string>("SaveDir",save_directory,"");
     nh.param<int>("multisession_mode",multisession_mode, 0);
+
+    if (keyframe_scan_digits < 1)
+        keyframe_scan_digits = 1;
+    if (keyframe_scan_directory.empty())
+        keyframe_scan_directory = save_directory + "Scans";
 
     std::vector<double> cov1, cov2, cov3;
     nh.param<std::vector<double>>("AdjKPFCov", cov1, std::vector<double>());
@@ -211,6 +222,28 @@ bool loadConfig(ros::NodeHandle &nh)
     gtsam::Vector noise_vec6(6);
     noise_vec6 << cov3[0], cov3[1], cov3[2], cov3[3], cov3[4], cov3[5];
     pose_noise2_ = gtsam::noiseModel::Diagonal::Variances(noise_vec6);
+    return true;
+}
+
+bool saveKeyframeScanToDisk(int keyframe_idx, const pcl::PointCloud<PointType>::Ptr &cloud)
+{
+    if (!export_keyframe_scans || !cloud)
+        return false;
+
+    std::ostringstream oss;
+    oss << keyframe_scan_directory << "/" << std::setw(keyframe_scan_digits)
+        << std::setfill('0') << keyframe_idx << ".pcd";
+
+    try
+    {
+        pcl::io::savePCDFileBinary(oss.str(), *cloud);
+    }
+    catch (pcl::PCLException &e)
+    {
+        ROS_ERROR("Failed to save keyframe scan %d: %s", keyframe_idx, e.what());
+        return false;
+    }
+
     return true;
 }
 
@@ -608,16 +641,23 @@ void correctPosesAndSaveTxt()
     last_kfsize = keyframes_.size();
     auto start1 = std::chrono::system_clock::now();
     poses_opt_file.open(poses_opt_fname, std::ios::out | std::ios::trunc);
+    std::ofstream poses_raw_out(poses_raw_fname, std::ios::out | std::ios::trunc);
+    poses_raw_out.precision(std::numeric_limits<double>::max_digits10);
     auto end1 = std::chrono::system_clock::now();
     auto elapsed_ms = (std::chrono::duration<double,std::milli>(end1 - start1)).count();
     for (int i = 0; i < keyframes_.size(); i++)
     {
         const gtsam::Pose3& pose_optimized = gts_cur_vals_.at<gtsam::Pose3>(gtsam::Symbol(i));
+        const auto& pose_raw = keyframes_[i].KeyPose;
         tf2::Quaternion q;
+        tf2::Quaternion q_raw;
         q.setRPY(pose_optimized.rotation().roll(), pose_optimized.rotation().pitch(), pose_optimized.rotation().yaw());
+        q_raw.setRPY(pose_raw.roll, pose_raw.pitch, pose_raw.yaw);
         auto start2 = std::chrono::system_clock::now();
         poses_opt_file     <<  keyframes_[i].KeyTime << " " << pose_optimized.x() << " " << pose_optimized.y() << " " << pose_optimized.z()
             << " " << q.getX() << " " << q.getY() << " " << q.getZ() << " " << q.getW() << std::endl;
+        poses_raw_out      <<  keyframes_[i].KeyTime << " " << pose_raw.x << " " << pose_raw.y << " " << pose_raw.z
+            << " " << q_raw.getX() << " " << q_raw.getY() << " " << q_raw.getZ() << " " << q_raw.getW() << std::endl;
         auto end2 = std::chrono::system_clock::now();
         elapsed_ms += (std::chrono::duration<double,std::milli>(end2 - start2)).count();
 //        poses_opt_all_file <<  keyframes_[i].KeyTime << " " << pose_optimized.x() << " " << pose_optimized.y() << " " << pose_optimized.z()
@@ -628,6 +668,7 @@ void correctPosesAndSaveTxt()
 //    poses_opt_all_file << std::endl;
     auto start3 = std::chrono::system_clock::now();
     poses_opt_file.close();
+    poses_raw_out.close();
     auto end3 = std::chrono::system_clock::now();
     elapsed_ms += (std::chrono::duration<double,std::milli>(end3 - start3)).count();
     opt_debug_file << "save pose txt takes " << elapsed_ms << std::endl;
@@ -1135,7 +1176,6 @@ else
 
         graphpose_count++;
         has_add_prior_node = true;
-        poses_raw_file << 0 << " " << pose_origin.x() << " " << pose_origin.y() << " " << pose_origin.z() << " " << std::endl;
         x_range_max = pose_origin.x(); y_range_max = pose_origin.y(); z_range_max = pose_origin.z();
         x_range_min = pose_origin.x(); y_range_min = pose_origin.y(); z_range_min = pose_origin.z();
     }
@@ -1173,7 +1213,6 @@ else
         gts_graph_recover_.add(gtsam::BetweenFactor<gtsam::Pose3>(prev_node_idx, curr_node_idx, pose_prev.between(pose_curr), pose_noise_));
         addInitialPoseValues(curr_node_idx, pose_curr);
         graphpose_count++;
-        poses_raw_file << curr_node_idx << " " << pose_curr.x() << " " << pose_curr.y() << " " << pose_curr.z() << " " << std::endl;
         x_range_max = pose_curr.x()>x_range_max?pose_curr.x():x_range_max;
         y_range_max = pose_curr.y()>y_range_max?pose_curr.y():y_range_max;
         z_range_max = pose_curr.z()>z_range_max?pose_curr.z():z_range_max;
@@ -1229,6 +1268,9 @@ void main_pgo()
         sleep(0.001);
         if (odom_buf_.empty() || cloud_buf_.empty())
             continue;
+        bool has_new_keyframe = false;
+        int new_keyframe_idx = -1;
+        pcl::PointCloud<PointType>::Ptr new_keyframe_cloud;
         mtx_sub_.lock();
         {
             // turn raw messages into stuff in a containner
@@ -1256,6 +1298,9 @@ void main_pgo()
                                    (akeyframe.KeyPose.z - keyframes_.back().KeyPose.z)*(akeyframe.KeyPose.z - keyframes_.back().KeyPose.z));
             akeyframe.KeyTime = cloud_buf_front->header.stamp;
             keyframes_.push_back(akeyframe);
+            has_new_keyframe = true;
+            new_keyframe_idx = keyframes_.size() - 1;
+            new_keyframe_cloud = akeyframe.KeyCloud;
             cloud_buf_.pop_front();
             odom_buf_.pop_front();
             opt_debug_file << "[Add Subamp Info]: akeyframe.KeyCloud: " << akeyframe.KeyCloud->size() << std::endl;
@@ -1265,6 +1310,9 @@ void main_pgo()
             opt_debug_file << ", keyframes size(): " << keyframes_.size() << std::endl;
         }
         mtx_sub_.unlock();
+
+        if (has_new_keyframe)
+            saveKeyframeScanToDisk(new_keyframe_idx, new_keyframe_cloud);
 
         mtx_pgo_.lock();
         auto start = std::chrono::system_clock::now();
@@ -1715,6 +1763,7 @@ int main(int argc, char **argv)
 //    poses_opt_file = std::fstream(poses_opt_fname, std::fstream::out);
     pgo_scan_directory = save_directory + "scans";
     auto unused = system((std::string("mkdir -p ") + pgo_scan_directory).c_str());
+    unused      = system((std::string("mkdir -p ") + keyframe_scan_directory).c_str());
     unused      = system((std::string("mkdir -p ") + pgo_scan_directory + "/FPR_Accepted").c_str());
     unused      = system((std::string("mkdir -p ") + pgo_scan_directory + "/FPR_Rejected").c_str());
     unused      = system((std::string("mkdir -p ") + pgo_scan_directory + "/LargeOverlap").c_str());
@@ -1723,7 +1772,6 @@ int main(int argc, char **argv)
     unused      = system((std::string("mkdir -p ") + save_directory + "/map_eva").c_str());
 
     poses_raw_fname = save_directory + "odom_poses.txt";
-    poses_raw_file = std::fstream(poses_raw_fname, std::fstream::out);
 
 //    times_file = std::fstream(save_directory + "timestamps.txt", std::fstream::out);
 //    poses_opt_all_file.open(save_directory + "optimized_poses_full.txt", ios::out | ios::trunc);
@@ -1738,7 +1786,6 @@ int main(int argc, char **argv)
     opt_debug_file = std::fstream(save_directory + "opt_debug.txt", std::fstream::out);
 
     poses_opt_file.precision(std::numeric_limits<double>::max_digits10);
-    poses_raw_file.precision(std::numeric_limits<double>::max_digits10);
 //    poses_opt_all_file.precision(std::numeric_limits<double>::max_digits10);
 
     ros::Subscriber sub_cloud = nh.subscribe<sensor_msgs::PointCloud2>("/clouds_submap", 100, cloudCallback);
@@ -1815,7 +1862,6 @@ if (multisession_mode == 2)
 
     pose_graph_optimization.detach();
     map_viz.detach();
-    poses_raw_file.close();
     poses_opt_file.close();
     lc_file.close();
     //poses_opt_all_file.close();
